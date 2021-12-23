@@ -1,6 +1,5 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion compile_sdk_version
@@ -31,6 +30,10 @@ android {
     kotlinOptions {
         jvmTarget = "$jdk_version"
     }
+
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
@@ -43,5 +46,5 @@ dependencies {
     // constraint layout
     implementation "androidx.constraintlayout:constraintlayout:$constraint_layout_version"
     // dexter for permission
-    implementation 'com.karumi:dexter:6.2.1'
+    implementation 'com.karumi:dexter:6.2.3'
 }

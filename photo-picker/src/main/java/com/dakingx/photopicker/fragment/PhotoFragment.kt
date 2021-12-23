@@ -28,7 +28,6 @@ sealed class PhotoOpResult {
 typealias PhotoOpCallback = (PhotoOpResult) -> Unit
 
 class PhotoFragment : BaseFragment() {
-
     companion object {
         const val FRAGMENT_TAG = "photo_fragment"
 
@@ -68,7 +67,7 @@ class PhotoFragment : BaseFragment() {
     private var fileProviderAuthority: String = ""
 
     private var captureFileUri: Uri? = null
-    private var delPhoto = true //删除拍照、截图的原图
+    var delPhoto = true //删除拍照、截图的原图
     private var cropFileUri: Uri? = null
 
     private var captureCallback: PhotoOpCallback? = null
@@ -114,8 +113,7 @@ class PhotoFragment : BaseFragment() {
     }
 
     fun capture(callback: PhotoOpCallback) {
-        // 应用权限检查
-        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CAPTURE)) {
+        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CAPTURE)) { //应用权限检查
             callback.invoke(PhotoOpResult.Failure)
             return
         }
@@ -143,8 +141,7 @@ class PhotoFragment : BaseFragment() {
     }
 
     fun pick(callback: PhotoOpCallback) {
-        // 应用权限检查
-        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_PICK)) {
+        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_PICK)) { // 应用权限检查
             callback.invoke(PhotoOpResult.Failure)
             return
         }
@@ -162,37 +159,38 @@ class PhotoFragment : BaseFragment() {
      * @param fromCamera true:拍照；false:文件选图。
      */
     fun crop(uri: Uri, fromCamera: Boolean = true, callback: PhotoOpCallback) {
-        // 应用权限检查
-        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CROP)) {
+        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CROP)) { // 应用权限检查
             callback.invoke(PhotoOpResult.Failure)
             return
         }
         this.cropCallback = callback
 
         val sourceUri =
-            if (uri.scheme.equals(ContentResolver.SCHEME_FILE)) FileProvider.getUriForFile(
-                requireContext(), fileProviderAuthority, uri.toFile()
-            )
-            else uri
+            if (uri.scheme.equals(ContentResolver.SCHEME_FILE))
+                FileProvider.getUriForFile(requireContext(), fileProviderAuthority, uri.toFile())
+            else
+                uri
+
         val mimeType = requireContext().contentResolver.getType(sourceUri)
         val fileName = "crop_photo_${System.currentTimeMillis()}_${Random.nextInt(9999)}.jpg"
-        val destinationUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val values = ContentValues()
-            values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
-            requireContext().contentResolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                values
-            )
-        } else {
-            val file = context?.generateTempFile2(fileName)
-            if (file == null) {
-                callback.invoke(PhotoOpResult.Failure)
-                return
+        val destinationUri =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues()
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
+                requireContext().contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                )
+            } else {
+                val file = context?.generateTempFile2(fileName)
+                if (file == null) {
+                    callback.invoke(PhotoOpResult.Failure)
+                    return
+                }
+                Uri.fromFile(file)
             }
-            Uri.fromFile(file)
-        }
 
         if (destinationUri == null) {
             callback.invoke(PhotoOpResult.Failure)

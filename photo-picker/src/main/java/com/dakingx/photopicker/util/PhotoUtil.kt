@@ -1,11 +1,10 @@
 package com.dakingx.photopicker.util
 
+import android.net.Uri
 import androidx.fragment.app.FragmentManager
 import com.dakingx.photopicker.fragment.PhotoFragment
 import com.dakingx.photopicker.fragment.PhotoOpCallback
 import com.dakingx.photopicker.fragment.PhotoOpResult
-
-import android.net.Uri
 import com.dakingx.photopicker.ext.resumeSafely
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -22,9 +21,7 @@ suspend fun capturePhoto(
 ): PhotoOpResult =
     suspendCancellableCoroutine { continuation ->
         val fragment = getPhotoFragment(fm, authority, delPhoto)
-        fragment.capture(
-            genCropPhotoCb(fragment, true, continuation)
-        )
+        fragment.capture(genCropPhotoCb(fragment, true, continuation))
     }
 
 /**
@@ -32,10 +29,8 @@ suspend fun capturePhoto(
  */
 suspend fun pickPhoto(fm: FragmentManager, authority: String): PhotoOpResult =
     suspendCancellableCoroutine { continuation ->
-        val fragment = getPhotoFragment(fm, authority)
-        fragment.pick(
-            genCropPhotoCb(fragment, false, continuation)
-        )
+        val fragment = getPhotoFragment(fm, authority, false)
+        fragment.pick(genCropPhotoCb(fragment, false, continuation))
     }
 
 /**
@@ -69,7 +64,7 @@ suspend fun cropPhoto(
     authority: String,
     sourceUri: Uri,
 ): PhotoOpResult = suspendCancellableCoroutine { continuation ->
-    val fragment = getPhotoFragment(fm, authority)
+    val fragment = getPhotoFragment(fm, authority, false)
     fragment.crop(sourceUri) { cropResult ->
         continuation.resumeSafely(cropResult)
     }
@@ -82,8 +77,10 @@ private fun getPhotoFragment(
     fm: FragmentManager,
     fileProviderAuthority: String,
     delPhoto: Boolean = true
-) = fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment
-    ?: PhotoFragment.newInstance(fileProviderAuthority, delPhoto).apply {
+) =
+    (fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment)?.apply {
+        this.delPhoto = delPhoto
+    } ?: PhotoFragment.newInstance(fileProviderAuthority, delPhoto).apply {
         fm.beginTransaction()
             .add(this, PhotoFragment.FRAGMENT_TAG)
             .commitAllowingStateLoss()

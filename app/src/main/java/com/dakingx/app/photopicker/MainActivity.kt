@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.dakingx.app.photopicker.config.getFileProviderAuthority
+import com.dakingx.app.photopicker.databinding.ActivityMainBinding
 import com.dakingx.photopicker.ext.toBitmap
 import com.dakingx.photopicker.fragment.PhotoFragment
 import com.dakingx.photopicker.fragment.PhotoOpResult
@@ -15,29 +16,24 @@ import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
-import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-
+    private lateinit var binding: ActivityMainBinding
     private lateinit var coroutineScope: CoroutineScope
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         coroutineScope = MainScope()
 
-        captureBtn.setOnClickListener {
-            capture()
-        }
-
-        galleryBtn.setOnClickListener {
-            pickFromGallery()
-        }
+        binding.captureBtn.setOnClickListener { capture() }
+        binding.galleryBtn.setOnClickListener { pickFromGallery() }
     }
 
     override fun onDestroy() {
@@ -84,7 +80,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePhotoUri(uri: Uri) {
         val bitmap = uri.toBitmap(this)
-        photoIv.setImageBitmap(bitmap)
+        binding.photoIv.setImageBitmap(bitmap)
         //删除裁剪后的图片原图
         contentResolver.delete(uri, null, null)
     }
