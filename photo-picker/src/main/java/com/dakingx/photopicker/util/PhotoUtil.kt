@@ -12,10 +12,16 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * 拍照并裁剪
+ * @param authority fileProvider
+ * @param delPhoto 删除拍照原图、截图的原图
  */
-suspend fun capturePhoto(fm: FragmentManager, authority: String): PhotoOpResult =
+suspend fun capturePhoto(
+    fm: FragmentManager,
+    authority: String,
+    delPhoto: Boolean = true
+): PhotoOpResult =
     suspendCancellableCoroutine { continuation ->
-        val fragment = getPhotoFragment(fm, authority)
+        val fragment = getPhotoFragment(fm, authority, delPhoto)
         fragment.capture(
             genCropPhotoCb(fragment, true, continuation)
         )
@@ -34,18 +40,17 @@ suspend fun pickPhoto(fm: FragmentManager, authority: String): PhotoOpResult =
 
 /**
  * 处理裁剪
- * @param fromeCamera true:拍照；false:文件选图。
+ * @param fromCamera true:拍照；false:文件选图。
  */
 private fun genCropPhotoCb(
     fragment: PhotoFragment,
-    fromeCamera: Boolean,
+    fromCamera: Boolean,
     continuation: CancellableContinuation<PhotoOpResult>
 ) = object : PhotoOpCallback {
     override fun invoke(result: PhotoOpResult) {
         when (result) {
-            is PhotoOpResult.Success -> {
-                // 裁剪
-                fragment.crop(result.uri, fromeCamera) { cropResult ->
+            is PhotoOpResult.Success -> { //裁剪
+                fragment.crop(result.uri, fromCamera) { cropResult ->
                     continuation.resumeSafely(cropResult)
                 }
             }
@@ -62,7 +67,7 @@ private fun genCropPhotoCb(
 suspend fun cropPhoto(
     fm: FragmentManager,
     authority: String,
-    sourceUri: Uri
+    sourceUri: Uri,
 ): PhotoOpResult = suspendCancellableCoroutine { continuation ->
     val fragment = getPhotoFragment(fm, authority)
     fragment.crop(sourceUri) { cropResult ->
@@ -73,11 +78,14 @@ suspend fun cropPhoto(
 /**
  * 获取PhotoFragment
  */
-private fun getPhotoFragment(fm: FragmentManager, fileProviderAuthority: String) =
-    fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment
-        ?: PhotoFragment.newInstance(fileProviderAuthority).apply {
-            fm.beginTransaction()
-                .add(this, PhotoFragment.FRAGMENT_TAG)
-                .commitAllowingStateLoss()
-            fm.executePendingTransactions()
-        }
+private fun getPhotoFragment(
+    fm: FragmentManager,
+    fileProviderAuthority: String,
+    delPhoto: Boolean = true
+) = fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment
+    ?: PhotoFragment.newInstance(fileProviderAuthority, delPhoto).apply {
+        fm.beginTransaction()
+            .add(this, PhotoFragment.FRAGMENT_TAG)
+            .commitAllowingStateLoss()
+        fm.executePendingTransactions()
+    }

@@ -85,6 +85,8 @@ class MainActivity : AppCompatActivity() {
     private fun handlePhotoUri(uri: Uri) {
         val bitmap = uri.toBitmap(this)
         photoIv.setImageBitmap(bitmap)
+        //删除裁剪后的图片原图
+        contentResolver.delete(uri, null, null)
     }
 
     private fun requestPermission(vararg permission: String, successAction: () -> Unit) {

@@ -49,14 +49,16 @@ class PhotoFragment : BaseFragment() {
         )
 
         @JvmStatic
-        fun newInstance(fileProviderAuthority: String) =
+        fun newInstance(fileProviderAuthority: String, delPhoto: Boolean = true) =
             PhotoFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_FILE_PROVIDER_AUTH, fileProviderAuthority)
+                    putBoolean(ARG_DEL_PHOTO, delPhoto)
                 }
             }
 
         private const val ARG_FILE_PROVIDER_AUTH = "arg_file_provider_auth"
+        private const val ARG_DEL_PHOTO = "arg_del_photo"
 
         private const val REQ_CODE_CAPTURE = 0x601
         private const val REQ_CODE_PICK = 0x602
@@ -66,6 +68,7 @@ class PhotoFragment : BaseFragment() {
     private var fileProviderAuthority: String = ""
 
     private var captureFileUri: Uri? = null
+    private var delPhoto = true //删除拍照、截图的原图
     private var cropFileUri: Uri? = null
 
     private var captureCallback: PhotoOpCallback? = null
@@ -76,6 +79,9 @@ class PhotoFragment : BaseFragment() {
         bundle?.apply {
             getString(ARG_FILE_PROVIDER_AUTH)?.let {
                 fileProviderAuthority = it
+            }
+            getBoolean(ARG_DEL_PHOTO).let {
+                delPhoto = it
             }
         }
     }
@@ -116,24 +122,22 @@ class PhotoFragment : BaseFragment() {
 
         this.captureCallback = callback
 
-        val file = context?.generateTempFile("capture_photo")
-        if (file == null) {
+        val tempFile = context?.generateTempFile("capture_photo")
+        if (tempFile == null) {
             callback.invoke(PhotoOpResult.Failure)
             return
         }
 
-        val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            FileProvider.getUriForFile(requireContext(), fileProviderAuthority, file)
+        captureFileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            FileProvider.getUriForFile(requireContext(), fileProviderAuthority, tempFile)
         } else {
-            Uri.fromFile(file)
+            Uri.fromFile(tempFile)
         }
-
-        captureFileUri = uri
 
         val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1)
-            putExtra(MediaStore.EXTRA_OUTPUT, uri)
+            putExtra(MediaStore.EXTRA_OUTPUT, captureFileUri)
         }
         startActivityForResult(intent, REQ_CODE_CAPTURE)
     }
@@ -155,9 +159,9 @@ class PhotoFragment : BaseFragment() {
     }
 
     /**
-     * @param fromeCamera true:拍照；false:文件选图。
+     * @param fromCamera true:拍照；false:文件选图。
      */
-    fun crop(uri: Uri, fromeCamera: Boolean = true, callback: PhotoOpCallback) {
+    fun crop(uri: Uri, fromCamera: Boolean = true, callback: PhotoOpCallback) {
         // 应用权限检查
         if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CROP)) {
             callback.invoke(PhotoOpResult.Failure)
@@ -198,7 +202,7 @@ class PhotoFragment : BaseFragment() {
 
         val cropIntent =
             Intent("com.android.camera.action.CROP").apply {
-                if (fromeCamera) {
+                if (fromCamera) {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 }
 
@@ -237,7 +241,7 @@ class PhotoFragment : BaseFragment() {
                 }
 
                 captureCallback = null
-                captureFileUri = null
+//                captureFileUri = null
             }
 
             REQ_CODE_PICK -> {
@@ -264,7 +268,6 @@ class PhotoFragment : BaseFragment() {
                 when (resultCode) {
                     Activity.RESULT_OK -> {
                         val uri = cropFileUri
-
                         cropCallback?.invoke(
                             if (uri != null) PhotoOpResult.Success(uri)
                             else PhotoOpResult.Failure
@@ -277,6 +280,12 @@ class PhotoFragment : BaseFragment() {
                         cropCallback?.invoke(PhotoOpResult.Failure)
                     }
                 }
+
+                if (delPhoto) { //删除原图
+                    requireContext().contentResolver.delete(captureFileUri!!, null, null)
+                }
+                captureFileUri = null
+
                 cropCallback = null
                 cropFileUri = null
             }
