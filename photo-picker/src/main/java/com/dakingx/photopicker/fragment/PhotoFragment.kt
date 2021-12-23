@@ -11,10 +11,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import com.dakingx.photopicker.ext.checkAppPermission
-import com.dakingx.photopicker.ext.filePath2Uri
 import com.dakingx.photopicker.ext.generateTempFile
 import com.dakingx.photopicker.ext.generateTempFile2
 import kotlin.random.Random
@@ -58,10 +58,6 @@ class PhotoFragment : BaseFragment() {
 
         private const val ARG_FILE_PROVIDER_AUTH = "arg_file_provider_auth"
         private const val ARG_DEL_PHOTO = "arg_del_photo"
-
-        private const val REQ_CODE_CAPTURE = 0x601
-        private const val REQ_CODE_PICK = 0x602
-        private const val REQ_CODE_CROP = 0x603
     }
 
     private var fileProviderAuthority: String = ""
@@ -73,6 +69,80 @@ class PhotoFragment : BaseFragment() {
     private var captureCallback: PhotoOpCallback? = null
     private var pickCallback: PhotoOpCallback? = null
     private var cropCallback: PhotoOpCallback? = null
+
+    //拍照触发
+    private val captureLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            when (it.resultCode) {
+                Activity.RESULT_OK -> {
+                    val uri = captureFileUri
+
+                    captureCallback?.invoke(
+                        if (uri != null) PhotoOpResult.Success(uri)
+                        else PhotoOpResult.Failure
+                    )
+                }
+
+                Activity.RESULT_CANCELED -> {
+                    captureCallback?.invoke(PhotoOpResult.Cancel)
+                }
+
+                else -> {
+                    captureCallback?.invoke(PhotoOpResult.Failure)
+                }
+            }
+
+            captureCallback = null
+        }
+
+    //图片触发
+    private val picLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            when (it.resultCode) {
+                Activity.RESULT_OK -> {
+                    val uri = it.data?.data
+
+                    pickCallback?.invoke(
+                        if (uri != null) PhotoOpResult.Success(uri)
+                        else PhotoOpResult.Failure
+                    )
+                }
+                Activity.RESULT_CANCELED -> {
+                    pickCallback?.invoke(PhotoOpResult.Cancel)
+                }
+                else -> {
+                    pickCallback?.invoke(PhotoOpResult.Failure)
+                }
+            }
+            pickCallback = null
+        }
+
+    private val cropLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            when (it.resultCode) {
+                Activity.RESULT_OK -> {
+                    val uri = cropFileUri
+                    cropCallback?.invoke(
+                        if (uri != null) PhotoOpResult.Success(uri)
+                        else PhotoOpResult.Failure
+                    )
+                }
+                Activity.RESULT_CANCELED -> {
+                    cropCallback?.invoke(PhotoOpResult.Cancel)
+                }
+                else -> {
+                    cropCallback?.invoke(PhotoOpResult.Failure)
+                }
+            }
+
+            if (delPhoto) { //删除原图
+                requireContext().contentResolver.delete(captureFileUri!!, null, null)
+            }
+            captureFileUri = null
+
+            cropCallback = null
+            cropFileUri = null
+        }
 
     override fun restoreState(bundle: Bundle?) {
         bundle?.apply {
@@ -93,9 +163,7 @@ class PhotoFragment : BaseFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         retainInstance = true
-
         if (fileProviderAuthority.isEmpty()) {
             throw RuntimeException("fileProviderAuthority can't be empty")
         }
@@ -137,11 +205,11 @@ class PhotoFragment : BaseFragment() {
             putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1)
             putExtra(MediaStore.EXTRA_OUTPUT, captureFileUri)
         }
-        startActivityForResult(intent, REQ_CODE_CAPTURE)
+        captureLauncher.launch(intent)
     }
 
     fun pick(callback: PhotoOpCallback) {
-        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_PICK)) { // 应用权限检查
+        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_PICK)) { //应用权限检查
             callback.invoke(PhotoOpResult.Failure)
             return
         }
@@ -152,14 +220,14 @@ class PhotoFragment : BaseFragment() {
             Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
                 type = "image/*"
             }
-        startActivityForResult(intent, REQ_CODE_PICK)
+        picLauncher.launch(intent)
     }
 
     /**
      * @param fromCamera true:拍照；false:文件选图。
      */
     fun crop(uri: Uri, fromCamera: Boolean = true, callback: PhotoOpCallback) {
-        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CROP)) { // 应用权限检查
+        if (!checkRequiredPermissions(REQUIRED_PERMISSIONS_FOR_CROP)) { //应用权限检查
             callback.invoke(PhotoOpResult.Failure)
             return
         }
@@ -198,102 +266,22 @@ class PhotoFragment : BaseFragment() {
         }
         cropFileUri = destinationUri
 
-        val cropIntent =
-            Intent("com.android.camera.action.CROP").apply {
-                if (fromCamera) {
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                }
-
-                setDataAndType(sourceUri, mimeType)
-                putExtra("noFaceDetection", true)
-                putExtra("crop", "true")
-                putExtra("scale", true)
-                putExtra("scaleUpIfNeeded", true)
-                putExtra(MediaStore.EXTRA_OUTPUT, destinationUri)
-                putExtra("outputFormat", Bitmap.CompressFormat.JPEG.name)
-                putExtra("return-data", false)
-            }
-        startActivityForResult(cropIntent, REQ_CODE_CROP)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        when (requestCode) {
-            REQ_CODE_CAPTURE -> {
-                when (resultCode) {
-                    Activity.RESULT_OK -> {
-                        val uri = captureFileUri
-
-                        captureCallback?.invoke(
-                            if (uri != null) PhotoOpResult.Success(uri)
-                            else PhotoOpResult.Failure
-                        )
-                    }
-
-                    Activity.RESULT_CANCELED -> {
-                        captureCallback?.invoke(PhotoOpResult.Cancel)
-                    }
-
-                    else -> {
-                        captureCallback?.invoke(PhotoOpResult.Failure)
-                    }
-                }
-
-                captureCallback = null
-//                captureFileUri = null
+        val cropIntent = Intent("com.android.camera.action.CROP").apply {
+            if (fromCamera) {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
 
-            REQ_CODE_PICK -> {
-                when (resultCode) {
-                    Activity.RESULT_OK -> {
-                        val uri = data?.data
-
-                        pickCallback?.invoke(
-                            if (uri != null) PhotoOpResult.Success(uri)
-                            else PhotoOpResult.Failure
-                        )
-                    }
-                    Activity.RESULT_CANCELED -> {
-                        pickCallback?.invoke(PhotoOpResult.Cancel)
-                    }
-                    else -> {
-                        pickCallback?.invoke(PhotoOpResult.Failure)
-                    }
-                }
-                pickCallback = null
-            }
-
-            REQ_CODE_CROP -> {
-                when (resultCode) {
-                    Activity.RESULT_OK -> {
-                        val uri = cropFileUri
-                        cropCallback?.invoke(
-                            if (uri != null) PhotoOpResult.Success(uri)
-                            else PhotoOpResult.Failure
-                        )
-                    }
-                    Activity.RESULT_CANCELED -> {
-                        cropCallback?.invoke(PhotoOpResult.Cancel)
-                    }
-                    else -> {
-                        cropCallback?.invoke(PhotoOpResult.Failure)
-                    }
-                }
-
-                if (delPhoto) { //删除原图
-                    requireContext().contentResolver.delete(captureFileUri!!, null, null)
-                }
-                captureFileUri = null
-
-                cropCallback = null
-                cropFileUri = null
-            }
-
-            else -> super.onActivityResult(requestCode, resultCode, data)
+            setDataAndType(sourceUri, mimeType)
+            putExtra("noFaceDetection", true)
+            putExtra("crop", "true")
+            putExtra("scale", true)
+            putExtra("scaleUpIfNeeded", true)
+            putExtra(MediaStore.EXTRA_OUTPUT, destinationUri)
+            putExtra("outputFormat", Bitmap.CompressFormat.JPEG.name)
+            putExtra("return-data", false)
         }
+        cropLauncher.launch(cropIntent)
     }
-
-    private fun filePath2Uri(filePath: String): Uri? =
-        context?.filePath2Uri(fileProviderAuthority, filePath)
 
     private fun checkRequiredPermissions(requiredPermissions: List<String>): Boolean =
         context?.checkAppPermission(*requiredPermissions.toTypedArray()) ?: false
