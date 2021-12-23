@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
 
 //apply plugin: 'com.github.dcendents.android-maven'
 
@@ -57,4 +58,17 @@ task sourcesJar(type: Jar) {
 
 artifacts {
     archives sourcesJar
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.github'
+                artifactId = 'dakingx'
+                version = '1.0.0-alpha08'
+            }
+        }
+    }
 }
