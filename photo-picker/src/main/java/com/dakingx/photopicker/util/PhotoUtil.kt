@@ -2,10 +2,10 @@ package com.dakingx.photopicker.util
 
 import android.net.Uri
 import androidx.fragment.app.FragmentManager
+import com.dakingx.photopicker.ext.resumeSafely
 import com.dakingx.photopicker.fragment.PhotoFragment
 import com.dakingx.photopicker.fragment.PhotoOpCallback
 import com.dakingx.photopicker.fragment.PhotoOpResult
-import com.dakingx.photopicker.ext.resumeSafely
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -15,14 +15,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * @param delPhoto 删除拍照原图、截图的原图
  */
 suspend fun capturePhoto(
-    fm: FragmentManager,
-    authority: String,
-    delPhoto: Boolean = true
-): PhotoOpResult =
-    suspendCancellableCoroutine { continuation ->
-        val fragment = getPhotoFragment(fm, authority, delPhoto)
-        fragment.capture(genCropPhotoCb(fragment, true, continuation))
-    }
+    fm: FragmentManager, authority: String, delPhoto: Boolean = true
+): PhotoOpResult = suspendCancellableCoroutine { continuation ->
+    val fragment = getPhotoFragment(fm, authority, delPhoto)
+    fragment.capture(genCropPhotoCb(fragment, true, continuation))
+}
 
 /**
  * 选取照片并裁剪
@@ -49,6 +46,7 @@ private fun genCropPhotoCb(
                     continuation.resumeSafely(cropResult)
                 }
             }
+
             else -> {
                 continuation.resumeSafely(result)
             }
@@ -74,15 +72,10 @@ suspend fun cropPhoto(
  * 获取PhotoFragment
  */
 private fun getPhotoFragment(
-    fm: FragmentManager,
-    fileProviderAuthority: String,
-    delPhoto: Boolean = true
-) =
-    (fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment)?.apply {
-        this.delPhoto = delPhoto
-    } ?: PhotoFragment.newInstance(fileProviderAuthority, delPhoto).apply {
-        fm.beginTransaction()
-            .add(this, PhotoFragment.FRAGMENT_TAG)
-            .commitAllowingStateLoss()
-        fm.executePendingTransactions()
-    }
+    fm: FragmentManager, fileProviderAuthority: String, delPhoto: Boolean = true
+) = (fm.findFragmentByTag(PhotoFragment.FRAGMENT_TAG) as? PhotoFragment)?.apply {
+    this.delPhoto = delPhoto
+} ?: PhotoFragment.newInstance(fileProviderAuthority, delPhoto).apply {
+    fm.beginTransaction().add(this, PhotoFragment.FRAGMENT_TAG).commitAllowingStateLoss()
+    fm.executePendingTransactions()
+}

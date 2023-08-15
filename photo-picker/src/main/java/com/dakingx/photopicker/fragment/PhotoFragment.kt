@@ -38,13 +38,11 @@ class PhotoFragment : BaseFragment() {
         )
 
         val REQUIRED_PERMISSIONS_FOR_PICK = listOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
 
         val REQUIRED_PERMISSIONS_FOR_CROP = listOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
 
         @JvmStatic
@@ -107,9 +105,11 @@ class PhotoFragment : BaseFragment() {
                         else PhotoOpResult.Failure
                     )
                 }
+
                 Activity.RESULT_CANCELED -> {
                     pickCallback?.invoke(PhotoOpResult.Cancel)
                 }
+
                 else -> {
                     pickCallback?.invoke(PhotoOpResult.Failure)
                 }
@@ -127,9 +127,11 @@ class PhotoFragment : BaseFragment() {
                         else PhotoOpResult.Failure
                     )
                 }
+
                 Activity.RESULT_CANCELED -> {
                     cropCallback?.invoke(PhotoOpResult.Cancel)
                 }
+
                 else -> {
                     cropCallback?.invoke(PhotoOpResult.Failure)
                 }
@@ -234,31 +236,29 @@ class PhotoFragment : BaseFragment() {
         this.cropCallback = callback
 
         val sourceUri =
-            if (uri.scheme.equals(ContentResolver.SCHEME_FILE))
-                FileProvider.getUriForFile(requireContext(), fileProviderAuthority, uri.toFile())
-            else
-                uri
+            if (uri.scheme.equals(ContentResolver.SCHEME_FILE)) FileProvider.getUriForFile(
+                requireContext(), fileProviderAuthority, uri.toFile()
+            )
+            else uri
 
         val mimeType = requireContext().contentResolver.getType(sourceUri)
         val fileName = "crop_photo_${System.currentTimeMillis()}_${Random.nextInt(9999)}.jpg"
-        val destinationUri =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val values = ContentValues()
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
-                requireContext().contentResolver.insert(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    values
-                )
-            } else {
-                val file = context?.generateTempFile2(fileName)
-                if (file == null) {
-                    callback.invoke(PhotoOpResult.Failure)
-                    return
-                }
-                Uri.fromFile(file)
+        val destinationUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues()
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
+            requireContext().contentResolver.insert(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values
+            )
+        } else {
+            val file = context?.generateTempFile2(fileName)
+            if (file == null) {
+                callback.invoke(PhotoOpResult.Failure)
+                return
             }
+            Uri.fromFile(file)
+        }
 
         if (destinationUri == null) {
             callback.invoke(PhotoOpResult.Failure)
