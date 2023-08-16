@@ -11,6 +11,8 @@ import com.dakingx.photopicker.fragment.PhotoFragment
 import com.dakingx.photopicker.fragment.PhotoOpResult
 import com.dakingx.photopicker.util.capturePhoto
 import com.dakingx.photopicker.util.pickPhoto
+import com.hjq.permissions.OnPermissionCallback
+import com.hjq.permissions.XXPermissions
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
@@ -86,6 +88,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermission(vararg permission: String, successAction: () -> Unit) {
+//        XXPermissions.with(this).permission(*permission).request(object : OnPermissionCallback {
+//            override fun onGranted(permissions: MutableList<String>, allGranted: Boolean) {
+//                if (!allGranted) {
+//                    runOnUiThread {
+//                        toast(R.string.main_tip_lack_permission)
+//                    }
+//                    return
+//                }
+//
+//                runOnUiThread {
+//                    successAction()
+//                }
+//            }
+//        })
+
         Dexter.withContext(this)
             .withPermissions(*permission).withListener(
                 object : MultiplePermissionsListener {
