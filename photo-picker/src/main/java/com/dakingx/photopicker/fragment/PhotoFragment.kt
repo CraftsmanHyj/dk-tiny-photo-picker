@@ -31,19 +31,26 @@ class PhotoFragment : BaseFragment() {
     companion object {
         const val FRAGMENT_TAG = "photo_fragment"
 
+        val REQUIRED_PERMISSIONS_FOR_PICK_TIRAMISU = listOf(
+            Manifest.permission.READ_MEDIA_IMAGES
+        )
+
+        val REQUIRED_PERMISSIONS_FOR_PICK =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                listOf(
+                    Manifest.permission.READ_MEDIA_IMAGES
+                )
+            } else {
+                listOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+            }
+
+        val REQUIRED_PERMISSIONS_FOR_CROP = REQUIRED_PERMISSIONS_FOR_PICK
+
         val REQUIRED_PERMISSIONS_FOR_CAPTURE = listOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        val REQUIRED_PERMISSIONS_FOR_PICK = listOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        val REQUIRED_PERMISSIONS_FOR_CROP = listOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
+            Manifest.permission.CAMERA
+        ) + REQUIRED_PERMISSIONS_FOR_PICK
 
         @JvmStatic
         fun newInstance(fileProviderAuthority: String, delPhoto: Boolean = true) =
