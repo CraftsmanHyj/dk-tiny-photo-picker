@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 
 android {
-    compileSdkVersion compile_sdk_version
+    compileSdk compile_sdk_version
 
     defaultConfig {
         minSdkVersion min_sdk_version
@@ -22,8 +22,8 @@ android {
 
     compileOptions {
         encoding = "utf-8"
-        sourceCompatibility jdk_version
-        targetCompatibility jdk_version
+        sourceCompatibility compatibility_version
+        targetCompatibility compatibility_version
     }
 
     kotlinOptions {
@@ -47,7 +47,7 @@ dependencies {
 }
 
 // 打包源码
-task sourcesJar(type: Jar) {
+tasks.register('sourcesJar', Jar) {
     from android.sourceSets.main.java.srcDirs
     classifier = 'sources'
 }
