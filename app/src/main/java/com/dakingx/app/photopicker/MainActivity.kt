@@ -11,8 +11,6 @@ import com.dakingx.photopicker.fragment.PhotoFragment
 import com.dakingx.photopicker.fragment.PhotoOpResult
 import com.dakingx.photopicker.util.capturePhoto
 import com.dakingx.photopicker.util.pickPhoto
-import com.hjq.permissions.OnPermissionCallback
-import com.hjq.permissions.XXPermissions
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken

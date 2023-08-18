@@ -2,12 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion compile_sdk_version
+    compileSdk compile_sdk_version
 
     defaultConfig {
         applicationId "com.dakingx.app.dkphotopicker"
+
         minSdkVersion min_sdk_version
         targetSdkVersion target_sdk_version
+
         versionCode Integer.valueOf(app_version_code)
         versionName app_version_name
 
@@ -23,8 +25,8 @@ android {
 
     compileOptions {
         encoding = "utf-8"
-        sourceCompatibility jdk_version
-        targetCompatibility jdk_version
+        sourceCompatibility compatibility_version
+        targetCompatibility compatibility_version
     }
 
     kotlinOptions {
